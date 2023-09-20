@@ -2,77 +2,60 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"time"
+
+	"github.com/eiannone/keyboard"
 )
 
-func ping(finish chan bool, wait chan bool, n int) {
+func ping(finish chan bool, wait chan bool) {
 
 	ch := make(chan bool)
 	time.Sleep(time.Second)
 	fmt.Println("ping")
 	close(wait)
-	if n == 10 {
-		finish <- true
-	}
 
-	n++
-	go pong(finish, ch, n)
+	go pong(finish, ch)
 	<-ch
-
 }
 
-func pong(finish chan bool, wait chan bool, n int) {
+func pong(finish chan bool, wait chan bool) {
 
 	ch := make(chan bool)
 	time.Sleep(time.Second)
 	fmt.Println("pong")
 	close(wait)
-	if n == 10 {
-		finish <- true
-	}
-	n++
-	go ping(finish, ch, n)
-	<-ch
 
+	go ping(finish, ch)
+	<-ch
 }
 
-/*
-func getKeyTimeout(tm time.Duration) (ch rune, err error) {
-	if err = keyboard.Open(); err != nil {
+func WaitTillInput(finish chan bool) {
+	if err := keyboard.Open(); err != nil {
 		return
 	}
 	defer keyboard.Close()
-
-	var (
-		chChan  = make(chan rune, 1)
-		errChan = make(chan error, 1)
-
-		timer = time.NewTimer(tm)
-	)
-	defer timer.Stop()
-
-	go func(chChan chan<- rune, errChan chan<- error) {
+	for {
 		ch, _, err := keyboard.GetSingleKey()
 		if err != nil {
-			errChan <- err
-			return
+			log.Println(err)
+			panic("Vse ochen ploxo!!!!")
+		} else {
+			if ch == 'q' {
+				finish <- true
+				return
+			}
 		}
-		chChan <- ch
-	}(chChan, errChan)
 
-	select {
-	case <-timer.C:
-		return 0, nil
-	case ch = <-chChan:
-	case err = <-errChan:
 	}
 
-	return
-}*/
+}
 
 func main() {
 	finish := make(chan bool)
 	wait := make(chan bool)
-	go ping(finish, wait, 0)
-	fmt.Println(<-finish, <-wait)
+	go ping(finish, wait)
+	go WaitTillInput(finish)
+	<-finish
+	<-wait
 }
